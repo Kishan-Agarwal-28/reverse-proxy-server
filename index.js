@@ -1,11 +1,11 @@
 import express from 'express'
-import { request as httpRequest, createServer as createHttpServer } from 'http'
-import { request as httpsRequest, createServer as createHttpsServer } from 'https'
+import { request as httpRequest } from 'http'
+import { request as httpsRequest} from 'https'
 import mime from 'mime-types'
 import { URL } from 'url'
-import fs from 'fs'
-import path from 'path'
+// import { dbConnect } from './db/dbConnect.js'
 
+// dbConnect();
 const app = express()
 
 
@@ -19,9 +19,9 @@ function makeRequest(url, res) {
       'User-Agent': 'Node.js Proxy',
     },
   }
-
+console.log(parsedUrl)
   const request = parsedUrl.protocol === 'https:' ? httpsRequest : httpRequest
-
+console.log(request)
   const proxyReq = request(requestOptions, (proxyRes) => {
    
     const contentType = mime.lookup(url) || 'application/octet-stream'
@@ -36,7 +36,7 @@ function makeRequest(url, res) {
 
     proxyRes.pipe(res)
   })
-
+console.log(proxyReq)
   proxyReq.on('error', (err) => {
     console.error('Request error:', err)
     res.status(500).send('Internal Server Error')
@@ -50,12 +50,14 @@ app.use('/', (req, res) => {
   try {
     const hostname = req.hostname
     const subdomain = hostname.split('.')[0] 
-
+console.log(subdomain)
+console.log(hostname)
 
     const filePath = req.path === '/' ? '/index.html' : req.path
 
     const fileUrl = `${process.env.BASE_URI}/subdomains/__outputs/${subdomain}${filePath}`
-
+console.log(fileUrl)
+console.log(filePath)
     makeRequest(fileUrl, res)
   } catch (err) {
     console.error('Error in proxy handler:', err)
