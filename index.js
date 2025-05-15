@@ -48,7 +48,10 @@ console.log(proxyReq)
 
 app.use('/', (req, res) => {
   try {
-   const hostname = req.headers['x-forwarded-host'] || req.hostname
+    console.log('Host:', req.headers.host)
+  console.log('X-Forwarded-Host:', req.headers['x-forwarded-host'])
+  console.log('Hostname:', req.hostname)
+   const hostname = req.headers.host|| req.hostname
     const subdomain = hostname.split('.')[0] 
 console.log(subdomain)
 console.log(hostname)
