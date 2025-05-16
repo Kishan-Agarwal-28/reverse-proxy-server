@@ -53,7 +53,7 @@ app.use('/', (req, res) => {
    const rawHost = req.headers.host || '';
     const subdomain = req.headers['x-subdomain'] || rawHost.split('.')[0];
 console.log(subdomain)
-console.log(hostname)
+
 
     const filePath = req.path === '/' ? '/index.html' : req.path
 
