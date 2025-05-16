@@ -1,68 +1,73 @@
+import express from 'express'
 import { request as httpRequest } from 'http'
-import { request as httpsRequest } from 'https'
+import { request as httpsRequest} from 'https'
 import mime from 'mime-types'
 import { URL } from 'url'
+// import { dbConnect } from './db/dbConnect.js'
+
+// dbConnect();
+const app = express()
 
 
-function makeRequest(url) {
-  return new Promise((resolve, reject) => {
-    const parsedUrl = new URL(url)
-    const requestOptions = {
-      hostname: parsedUrl.hostname,
-      path: parsedUrl.pathname + parsedUrl.search,
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Node.js Proxy',
-      },
-    }
+function makeRequest(url, res) {
+  const parsedUrl = new URL(url)
+  const requestOptions = {
+    hostname: parsedUrl.hostname,
+    path: parsedUrl.pathname + parsedUrl.search,
+    method: 'GET',
+    headers: {
+      'User-Agent': 'Node.js Proxy',
+    },
+  }
+console.log(parsedUrl)
+  const request = parsedUrl.protocol === 'https:' ? httpsRequest : httpRequest
+console.log(request)
+  const proxyReq = request(requestOptions, (proxyRes) => {
+   
+    const contentType = mime.lookup(url) || 'application/octet-stream'
+    res.setHeader('Content-Type', contentType)
 
-    const request = parsedUrl.protocol === 'https:' ? httpsRequest : httpRequest
+   
+    res.removeHeader('content-security-policy')
 
-    const proxyReq = request(requestOptions, (proxyRes) => {
-      const contentType = mime.lookup(url) || 'application/octet-stream'
-      let data = []
+    res.setHeader('Cache-Control', 'public, max-age=3600')
+    res.setHeader('X-Content-Type-Options', 'nosniff')
 
-      proxyRes.on('data', (chunk) => {
-        data.push(chunk)
-      })
 
-      proxyRes.on('end', () => {
-        const buffer = Buffer.concat(data)
-        resolve({
-          data: buffer,
-          headers: {
-            'Content-Type': contentType,
-            'Cache-Control': 'public, max-age=3600',
-            'X-Content-Type-Options': 'nosniff'
-          }
-        })
-      })
-    })
-
-    proxyReq.on('error', (err) => {
-      console.error('Request error:', err)
-      reject(err)
-    })
-
-    proxyReq.end()
+    proxyRes.pipe(res)
   })
+console.log(proxyReq)
+  proxyReq.on('error', (err) => {
+    console.error('Request error:', err)
+    res.status(500).send('Internal Server Error')
+  })
+
+  proxyReq.end()
 }
 
 
-export default async function(req, res) {
+app.use('/', (req, res) => {
   try {
-    const url = new URL(req.url)
-    const hostname = url.hostname || req.headers['host']
-    const subdomain = hostname.split('.')[0]
+    console.log(req)
+    console.log(req.headers)
+   const rawHost = req.headers.host || '';
+    const subdomain = req.headers['x-subdomain'] || rawHost.split('.')[0];
+console.log(subdomain)
+console.log(hostname)
 
-    const path = url.pathname === '/' ? '/index.html' : url.pathname
-    const fileUrl = `${process.env.BASE_URI}/subdomains/__outputs/${subdomain}${path}`
+    const filePath = req.path === '/' ? '/index.html' : req.path
 
-    const response = await makeRequest(fileUrl)
-    
-    return res.send(response.data, 200, response.headers)
+    const fileUrl = `${process.env.BASE_URI}/subdomains/__outputs/${subdomain}${filePath}`
+console.log(fileUrl)
+console.log(filePath)
+    makeRequest(fileUrl, res)
   } catch (err) {
     console.error('Error in proxy handler:', err)
-    return res.send('Internal Server Error', 500)
+    res.status(500).send('Internal Server Error')
   }
-}
+})
+
+const PORT = process.env.PORT || 3000
+app.listen(PORT, () => {
+  console.log(`Reverse proxy server running on http://localhost:${PORT}`)
+})
