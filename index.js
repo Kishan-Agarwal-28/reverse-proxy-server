@@ -69,7 +69,7 @@ else{
 
    const filePath = req.path === '/' ? '/index.html' : req.path
 
-    const fileUrl = `${process.env.BASE_URI}/subdomains/__outputs/${subAvailable.owner}/${subAvailable.projectID}/${filePath}`
+    const fileUrl = `${process.env.BASE_URI}/subdomains/__outputs/${subAvailable.owner}/${subAvailable.projectID}${filePath}`
     console.log('File URL:', fileUrl)
     makeRequest(fileUrl, res)
 }
