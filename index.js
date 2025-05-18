@@ -3,9 +3,11 @@ import { request as httpRequest } from 'http'
 import { request as httpsRequest} from 'https'
 import mime from 'mime-types'
 import { URL } from 'url'
-// import { dbConnect } from './db/dbConnect.js'
-
-// dbConnect();
+import { dbConnect } from './db/dbConnect.js'
+import { connectRedis } from './db/connectRedis.js'
+dbConnect();
+connectRedis();
+import { getSubDomain } from './util/queryDb.js'
 const app = express()
 
 
@@ -19,9 +21,9 @@ function makeRequest(url, res) {
       'User-Agent': 'Node.js Proxy',
     },
   }
-console.log(parsedUrl)
+
   const request = parsedUrl.protocol === 'https:' ? httpsRequest : httpRequest
-console.log(request)
+
   const proxyReq = request(requestOptions, (proxyRes) => {
    
     const contentType = mime.lookup(url) || 'application/octet-stream'
@@ -36,7 +38,6 @@ console.log(request)
 
     proxyRes.pipe(res)
   })
-console.log(proxyReq)
   proxyReq.on('error', (err) => {
     console.error('Request error:', err)
     res.status(500).send('Internal Server Error')
@@ -48,19 +49,30 @@ console.log(proxyReq)
 
 app.use('/', (req, res) => {
   try {
-    console.log(req)
-    console.log(req.headers)
+
    const rawHost = req.headers.host || '';
     const subdomain = req.headers['x-subdomain'] || rawHost.split('.')[0];
-console.log(subdomain)
-console.log(hostname)
+    if(subdomain==="reverse-proxy-server-p4z0"){
+      return res.status(200).send('Reverse Proxy Server is running')
+    }
+    else{
+    if(!subdomain) {
+      return res.status(400).send('Subdomain not provided')
+    }
+    const subAvailable = getSubDomain(subdomain)
+if(!subAvailable) {
+  const errorUrl=`${process.env.BASE_URI}/subdomains/__error`
+  makeRequest(errorUrl, res)
+}
+else{
 
-    const filePath = req.path === '/' ? '/index.html' : req.path
+   const filePath = req.path === '/' ? '/index.html' : req.path
 
-    const fileUrl = `${process.env.BASE_URI}/subdomains/__outputs/${subdomain}${filePath}`
-console.log(fileUrl)
-console.log(filePath)
+    const fileUrl = `${process.env.BASE_URI}/subdomains/__outputs/${subAvailable.owner}/${subAvailable.projectID}/${filePath}`
+
     makeRequest(fileUrl, res)
+}
+    }
   } catch (err) {
     console.error('Error in proxy handler:', err)
     res.status(500).send('Internal Server Error')
