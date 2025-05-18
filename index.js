@@ -47,7 +47,7 @@ function makeRequest(url, res) {
 }
 
 
-app.use('/', (req, res) => {
+app.use('/', async(req, res) => {
   try {
 
    const rawHost = req.headers.host || '';
@@ -59,9 +59,10 @@ app.use('/', (req, res) => {
     if(!subdomain) {
       return res.status(400).send('Subdomain not provided')
     }
-    const subAvailable = getSubDomain(subdomain)
+    const subAvailable = await getSubDomain(subdomain)
+    
 if(!subAvailable) {
-  const errorUrl=`${process.env.BASE_URI}/subdomains/__error`
+  const errorUrl=`${process.env.BASE_URI}/subdomains/__error/index.html`
   makeRequest(errorUrl, res)
 }
 else{
@@ -69,7 +70,7 @@ else{
    const filePath = req.path === '/' ? '/index.html' : req.path
 
     const fileUrl = `${process.env.BASE_URI}/subdomains/__outputs/${subAvailable.owner}/${subAvailable.projectID}/${filePath}`
-
+    console.log('File URL:', fileUrl)
     makeRequest(fileUrl, res)
 }
     }

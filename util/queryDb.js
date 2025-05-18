@@ -15,8 +15,8 @@ const subdomainString=`user_${subdomain}`
 try {
     const subdomainData=await redis.get(subdomainString)
     if(subdomainData){
-
-        return JSON.parse(subdomainData)
+        const subdomainObj=await JSON.parse(subdomainData)
+        return subdomainObj
     }
     else{
        const subD = await SubDomain.findOne({ subDomain: subdomain });
