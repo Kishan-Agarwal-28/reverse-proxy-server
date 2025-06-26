@@ -8,6 +8,7 @@ import { connectRedis } from './db/connectRedis.js'
 dbConnect();
 connectRedis();
 import { getSubDomain } from './util/queryDb.js'
+import jwt from 'jsonwebtoken'
 const app = express()
 
 
@@ -65,7 +66,7 @@ if(!subAvailable) {
   const errorUrl=`${process.env.BASE_URI}/subdomains/__error/index.html`
   makeRequest(errorUrl, res)
 }
-else{
+else if(subAvailable.Ispublic){
 
    const filePath = req.path === '/' ? '/index.html' : req.path
 
@@ -73,8 +74,36 @@ else{
     console.log('File URL:', fileUrl)
     makeRequest(fileUrl, res)
 }
+else{
+  const {token}=req.query;
+  if(!token){
+    const errorUrl=`${process.env.BASE_URI}/subdomains/__error/index.html`
+  makeRequest(errorUrl, res)
+  }
+  else{
+    const decodedToken= jwt.verify(token,process.env.ACCESS_TOKEN_SECRET)
+    if(!decodedToken){
+      const errorUrl=`${process.env.BASE_URI}/subdomains/__error/index.html`
+      makeRequest(errorUrl, res)
     }
-  } catch (err) {
+    else{
+     if(decodedToken.sub!==subdomain){
+       const errorUrl=`${process.env.BASE_URI}/subdomains/__error/index.html`
+       makeRequest(errorUrl, res)
+     }
+     else {
+      
+   const filePath = req.path === '/' ? '/index.html' : req.path
+
+    const fileUrl = `${process.env.BASE_URI}/subdomains/__outputs/${subAvailable.owner}/${subAvailable.projectID}/${filePath}`
+    console.log('File URL:', fileUrl)
+    makeRequest(fileUrl, res)
+    }
+  }
+}
+    }
+  }
+ } catch (err) {
     console.error('Error in proxy handler:', err)
     res.status(500).send('Internal Server Error')
   }
