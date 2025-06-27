@@ -5,8 +5,8 @@ import mime from 'mime-types'
 import { URL } from 'url'
 import { dbConnect } from './db/dbConnect.js'
 import { connectRedis } from './db/connectRedis.js'
-export const subdomainDB = await dbConnect()
-connectRedis();
+ dbConnect()
+ connectRedis();
 import { getSubDomain } from './util/queryDb.js'
 import jwt from 'jsonwebtoken'
 const app = express()
@@ -50,19 +50,21 @@ function makeRequest(url, res) {
 
 app.use('/', async(req, res) => {
   try {
-
+    console.log("Request received")
    const rawHost = req.headers.host || '';
     const subdomain = req.headers['x-subdomain'] || rawHost.split('.')[0];
-    if(subdomain==="reverse-proxy-server-p4z0"){
+    if(subdomain==="https://reverse-proxy-server-o4li"){
       return res.status(200).send('Reverse Proxy Server is running')
     }
     else{
+
     if(!subdomain) {
       return res.status(400).send('Subdomain not provided')
     }
-    const subAvailable = await getSubDomain(subdomain)
-    
+    const subAvailable = await getSubDomain(subdomain);
+
 if(!subAvailable) {
+  console.log("Subdomain not found")
   const errorUrl=`${process.env.BASE_URI}/subdomains/__error/index.html`
   makeRequest(errorUrl, res)
   return;
@@ -70,7 +72,7 @@ if(!subAvailable) {
 else if(subAvailable.Ispublic){
 
    const filePath = req.path === '/' ? '/index.html' : req.path
-
+   console.log("Public file path:",filePath)
     const fileUrl = `${process.env.BASE_URI}/subdomains/__outputs/${subAvailable.owner}/${subAvailable.projectID}${filePath}`
     console.log('File URL:', fileUrl)
     makeRequest(fileUrl, res)
