@@ -65,6 +65,7 @@ app.use('/', async(req, res) => {
 if(!subAvailable) {
   const errorUrl=`${process.env.BASE_URI}/subdomains/__error/index.html`
   makeRequest(errorUrl, res)
+  return;
 }
 else if(subAvailable.Ispublic){
 
