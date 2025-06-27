@@ -2,14 +2,14 @@ import mongoose from "mongoose";
 import { redis } from '../db/connectRedis.js';
 import { REDIS_EXP } from "../constants.js";
 import { SubDomain } from '../subdomain.model.js';
-const cacheSubDomain=async(subdomain,projectID,owner)=>{
-const subdomainString=`user_${subdomain}`
-const subdomainData={
-    owner:owner,
-    projectID:projectID
-}
-await redis.set(subdomainString,JSON.stringify(subdomainData),"PX",REDIS_EXP)
-}
+const cacheSubDomain = async (subdomain, projectID, owner,Ispublic) => {
+  const key = formatSubdomainKey(subdomain);
+  const subdomainData = { owner, projectID ,Ispublic};
+  if(redis.get(key)){
+    await redis.del(key);
+  }
+  await redis.set(key, JSON.stringify(subdomainData), "PX", REDIS_EXP);
+};
 const getSubDomain = async(subdomain)=>{
 const subdomainString=`user_${subdomain}`
 try {
