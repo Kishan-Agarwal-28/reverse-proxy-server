@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { redis } from '../db/connectRedis.js';
 import { REDIS_EXP } from "../constants.js";
-import { SubDomain } from '../db/dbConnect.js';
+import { subdomainDB as SubDomain } from "../index.js";
 const cacheSubDomain=async(subdomain,projectID,owner)=>{
 const subdomainString=`user_${subdomain}`
 const subdomainData={

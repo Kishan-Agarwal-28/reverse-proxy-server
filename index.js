@@ -5,7 +5,7 @@ import mime from 'mime-types'
 import { URL } from 'url'
 import { dbConnect } from './db/dbConnect.js'
 import { connectRedis } from './db/connectRedis.js'
-dbConnect();
+export const subdomainDB = await dbConnect()
 connectRedis();
 import { getSubDomain } from './util/queryDb.js'
 import jwt from 'jsonwebtoken'
