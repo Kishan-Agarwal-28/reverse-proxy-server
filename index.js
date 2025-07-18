@@ -11,11 +11,17 @@ import { getSubDomain } from "./util/queryDb.js";
 import jwt from "jsonwebtoken";
 const app = express();
 
-function makeRequest(url, res,content = "application/octet-stream") {
+function makeRequest(url, res, content = "application/octet-stream") {
   const parsedUrl = new URL(url);
+  
+  // Debug: Log the parsed URL components
+  console.log("Making request to:", url);
+  console.log("Parsed URL - pathname:", parsedUrl.pathname);
+  console.log("Parsed URL - search:", parsedUrl.search);
+  
   const requestOptions = {
     hostname: parsedUrl.hostname,
-    path: parsedUrl.pathname + parsedUrl.search,
+    path: parsedUrl.pathname + parsedUrl.search, // This should include query params
     method: "GET",
     headers: {
       "User-Agent": "Node.js Proxy",
@@ -25,7 +31,7 @@ function makeRequest(url, res,content = "application/octet-stream") {
   const request = parsedUrl.protocol === "https:" ? httpsRequest : httpRequest;
 
   const proxyReq = request(requestOptions, (proxyRes) => {
-    const contentType = mime.lookup(url)||content;
+    const contentType = mime.lookup(url) || content;
     res.setHeader("Content-Type", contentType);
 
     res.removeHeader("content-security-policy");
@@ -35,6 +41,7 @@ function makeRequest(url, res,content = "application/octet-stream") {
 
     proxyRes.pipe(res);
   });
+  
   proxyReq.on("error", (err) => {
     console.error("Request error:", err);
     res.status(500).send("Internal Server Error");
