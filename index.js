@@ -11,7 +11,7 @@ import { getSubDomain } from "./util/queryDb.js";
 import jwt from "jsonwebtoken";
 const app = express();
 
-function makeRequest(url, res, content = "application/octet-stream", params = null) {
+function makeRequest(url, res, content = "application/octet-stream", errorHeaders = null) {
   const parsedUrl = new URL(url);
   
   console.log("Making request to:", url);
@@ -37,8 +37,14 @@ function makeRequest(url, res, content = "application/octet-stream", params = nu
     res.setHeader("Cache-Control", "public, max-age=3600");
     res.setHeader("X-Content-Type-Options", "nosniff");
 
-    // If it's HTML and we have parameters to inject, collect the response and modify it
-    if (content === "text/html" && params) {
+    // Add custom error headers if provided
+    if (errorHeaders) {
+      res.setHeader("X-Status", errorHeaders.status);
+      res.setHeader("X-Reason", errorHeaders.reason);
+    }
+
+    // If it's HTML and we have error headers to inject, collect the response and modify it
+    if (content === "text/html" && errorHeaders) {
       let htmlContent = '';
       
       proxyRes.on('data', (chunk) => {
@@ -46,33 +52,18 @@ function makeRequest(url, res, content = "application/octet-stream", params = nu
       });
       
       proxyRes.on('end', () => {
-        // Fix the parameter injection - make it more robust
-        let injectedHtml = htmlContent;
-        
-        // Replace window.location.search with the actual parameters
-        const searchParams = `"?${params.toString()}"`;
-        injectedHtml = injectedHtml.replace(
-          /window\.location\.search/g,
-          searchParams
-        );
-        
-        // Also inject the parameters as a script tag for better reliability
+        // Inject error information as a script tag
         const scriptInjection = `
           <script>
-            window.injectedParams = new URLSearchParams("${params.toString()}");
-            // Override URLSearchParams constructor to use injected params
-            const originalURLSearchParams = window.URLSearchParams;
-            window.URLSearchParams = function(init) {
-              if (init === window.location.search) {
-                return window.injectedParams;
-              }
-              return new originalURLSearchParams(init);
+            window.errorInfo = {
+              status: "${errorHeaders.status}",
+              reason: "${errorHeaders.reason.replace(/"/g, '\\"')}"
             };
           </script>
         `;
         
         // Inject before closing head tag
-        injectedHtml = injectedHtml.replace('</head>', `${scriptInjection}</head>`);
+        let injectedHtml = htmlContent.replace('</head>', `${scriptInjection}</head>`);
         
         // Fix Lottie animation paths - make them absolute
         const baseUri = process.env.BASE_URI || '';
@@ -114,12 +105,12 @@ app.use("/", async (req, res) => {
       
       if (restrictedSubdomains.includes(subdomain)) {
         console.log("Restricted subdomain access attempt:", subdomain);
-        const params = new URLSearchParams({
+        const errorHeaders = {
           status: "400",
           reason: "Restricted subdomain access attempt",
-        });
+        };
         const errorUrl = `${process.env.BASE_URI}/subdomains/__error/index.html`;
-        makeRequest(errorUrl, res,"" , params);
+        makeRequest(errorUrl, res, "text/html", errorHeaders);
         return;
       }
       
@@ -127,12 +118,12 @@ app.use("/", async (req, res) => {
 
       if (!subAvailable) {
         console.log("Subdomain not found");
-        const params = new URLSearchParams({
+        const errorHeaders = {
           status: "404",
           reason: "Subdomain not found",
-        });
+        };
         const errorUrl = `${process.env.BASE_URI}/subdomains/__error/index.html`;
-        makeRequest(errorUrl, res,"text/html", params);
+        makeRequest(errorUrl, res, "text/html", errorHeaders);
         return;
       } else if (subAvailable.Ispublic) {
         const filePath = req.path === "/" ? "/index.html" : req.path;
@@ -143,22 +134,22 @@ app.use("/", async (req, res) => {
       } else {
         const { token } = req.query;
         if (!token) {
-          const params = new URLSearchParams({
+          const errorHeaders = {
             status: "401",
             reason: "Unauthorized Access You need a valid url token to access this site as it is private",
-          });
+          };
           const errorUrl = `${process.env.BASE_URI}/subdomains/__error/index.html`;
-          makeRequest(errorUrl, res,"text/html", params);
+          makeRequest(errorUrl, res, "text/html", errorHeaders);
         } else {
           try {
             const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
             if (!decodedToken || decodedToken.sub !== subdomain) {
-              const params = new URLSearchParams({
+              const errorHeaders = {
                 status: "401",
                 reason: "Unauthorized Access You need a valid url token to access this site as it is private",
-              });
+              };
               const errorUrl = `${process.env.BASE_URI}/subdomains/__error/index.html`;
-              makeRequest(errorUrl, res,"text/html", params);
+              makeRequest(errorUrl, res, "text/html", errorHeaders);
             } else {
               const filePath = req.path === "/" ? "/index.html" : req.path;
               const fileUrl = `${process.env.BASE_URI}/subdomains/__outputs/${subAvailable.owner}/${subAvailable.projectID}${filePath}`;
@@ -167,24 +158,24 @@ app.use("/", async (req, res) => {
             }
           } catch (jwtError) {
             console.error("JWT verification error:", jwtError);
-            const params = new URLSearchParams({
+            const errorHeaders = {
               status: "401",
               reason: "Invalid or expired token",
-            });
+            };
             const errorUrl = `${process.env.BASE_URI}/subdomains/__error/index.html`;
-            makeRequest(errorUrl, res,"text/html", params);
+            makeRequest(errorUrl, res, "text/html", errorHeaders);
           }
         }
       }
     }
   } catch (err) {
     console.error("Error in proxy handler:", err);
-    const params = new URLSearchParams({
+    const errorHeaders = {
       status: "500",
       reason: "Internal Server Error",
-    });
+    };
     const errorUrl = `${process.env.BASE_URI}/subdomains/__error/index.html`;
-    makeRequest(errorUrl, res,"text/html", params);
+    makeRequest(errorUrl, res, "text/html", errorHeaders);
   }
 });
 
