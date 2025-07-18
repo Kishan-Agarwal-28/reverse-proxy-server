@@ -131,6 +131,7 @@ app.use("/", async (req, res) => {
         const fileUrl = `${process.env.BASE_URI}/subdomains/__outputs/${subAvailable.owner}/${subAvailable.projectID}${filePath}`;
         console.log("File URL:", fileUrl);
         makeRequest(fileUrl, res);
+        return;
       } else {
         const { token } = req.query;
         if (!token) {
@@ -140,6 +141,7 @@ app.use("/", async (req, res) => {
           };
           const errorUrl = `${process.env.BASE_URI}/subdomains/__error/index.html`;
           makeRequest(errorUrl, res, "text/html", errorHeaders);
+          return;
         } else {
           try {
             const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
@@ -150,11 +152,13 @@ app.use("/", async (req, res) => {
               };
               const errorUrl = `${process.env.BASE_URI}/subdomains/__error/index.html`;
               makeRequest(errorUrl, res, "text/html", errorHeaders);
+              return;
             } else {
               const filePath = req.path === "/" ? "/index.html" : req.path;
               const fileUrl = `${process.env.BASE_URI}/subdomains/__outputs/${subAvailable.owner}/${subAvailable.projectID}${filePath}`;
               console.log("File URL:", fileUrl);
               makeRequest(fileUrl, res);
+              return;
             }
           } catch (jwtError) {
             console.error("JWT verification error:", jwtError);
@@ -164,6 +168,7 @@ app.use("/", async (req, res) => {
             };
             const errorUrl = `${process.env.BASE_URI}/subdomains/__error/index.html`;
             makeRequest(errorUrl, res, "text/html", errorHeaders);
+            return;
           }
         }
       }
@@ -176,6 +181,7 @@ app.use("/", async (req, res) => {
     };
     const errorUrl = `${process.env.BASE_URI}/subdomains/__error/index.html`;
     makeRequest(errorUrl, res, "text/html", errorHeaders);
+    return;
   }
 });
 
