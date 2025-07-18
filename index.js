@@ -132,7 +132,7 @@ app.use("/", async (req, res) => {
           reason: "Subdomain not found",
         });
         const errorUrl = `${process.env.BASE_URI}/subdomains/__error/index.html`;
-        makeRequest(errorUrl, res,"", params);
+        makeRequest(errorUrl, res,"text/html", params);
         return;
       } else if (subAvailable.Ispublic) {
         const filePath = req.path === "/" ? "/index.html" : req.path;
@@ -148,7 +148,7 @@ app.use("/", async (req, res) => {
             reason: "Unauthorized Access You need a valid url token to access this site as it is private",
           });
           const errorUrl = `${process.env.BASE_URI}/subdomains/__error/index.html`;
-          makeRequest(errorUrl, res,"", params);
+          makeRequest(errorUrl, res,"text/html", params);
         } else {
           try {
             const decodedToken = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
@@ -158,7 +158,7 @@ app.use("/", async (req, res) => {
                 reason: "Unauthorized Access You need a valid url token to access this site as it is private",
               });
               const errorUrl = `${process.env.BASE_URI}/subdomains/__error/index.html`;
-              makeRequest(errorUrl, res,"", params);
+              makeRequest(errorUrl, res,"text/html", params);
             } else {
               const filePath = req.path === "/" ? "/index.html" : req.path;
               const fileUrl = `${process.env.BASE_URI}/subdomains/__outputs/${subAvailable.owner}/${subAvailable.projectID}${filePath}`;
@@ -172,7 +172,7 @@ app.use("/", async (req, res) => {
               reason: "Invalid or expired token",
             });
             const errorUrl = `${process.env.BASE_URI}/subdomains/__error/index.html`;
-            makeRequest(errorUrl, res,"", params);
+            makeRequest(errorUrl, res,"text/html", params);
           }
         }
       }
@@ -184,7 +184,7 @@ app.use("/", async (req, res) => {
       reason: "Internal Server Error",
     });
     const errorUrl = `${process.env.BASE_URI}/subdomains/__error/index.html`;
-    makeRequest(errorUrl, res,"", params);
+    makeRequest(errorUrl, res,"text/html", params);
   }
 });
 
