@@ -65,7 +65,11 @@ app.use('/', async(req, res) => {
 
 if(!subAvailable) {
   console.log("Subdomain not found")
-  const errorUrl=`${process.env.BASE_URI}/subdomains/__error/index.html`
+  const params = new URLSearchParams({
+    status: "404",
+    reason: "Subdomain not found"
+  })
+  const errorUrl=`${process.env.BASE_URI}/subdomains/__error/index.html?${params.toString()}`
   makeRequest(errorUrl, res)
   return;
 }
@@ -80,18 +84,30 @@ else if(subAvailable.Ispublic){
 else{
   const {token}=req.query;
   if(!token){
-    const errorUrl=`${process.env.BASE_URI}/subdomains/__error/index.html`
+    const params=new URLSearchParams({
+      status:"401",
+      reason:"Unauthorized Access You need a valid url token to access this site as it is private"
+    })
+    const errorUrl=`${process.env.BASE_URI}/subdomains/__error/index.html?${params.toString()}`
   makeRequest(errorUrl, res)
   }
   else{
     const decodedToken= jwt.verify(token,process.env.ACCESS_TOKEN_SECRET)
     if(!decodedToken){
-      const errorUrl=`${process.env.BASE_URI}/subdomains/__error/index.html`
+      const params=new URLSearchParams({
+        status:"401",
+        reason:"Unauthorized Access You need a valid url token to access this site as it is private"
+      })
+      const errorUrl=`${process.env.BASE_URI}/subdomains/__error/index.html?${params.toString()}`
       makeRequest(errorUrl, res)
     }
     else{
      if(decodedToken.sub!==subdomain){
-       const errorUrl=`${process.env.BASE_URI}/subdomains/__error/index.html`
+        const params=new URLSearchParams({
+          status:"401",
+          reason:"Unauthorized Access You need a valid url token to access this site as it is private"
+        })
+       const errorUrl=`${process.env.BASE_URI}/subdomains/__error/index.html?${params.toString()}`
        makeRequest(errorUrl, res)
      }
      else {
@@ -108,7 +124,12 @@ else{
   }
  } catch (err) {
     console.error('Error in proxy handler:', err)
-    res.status(500).send('Internal Server Error')
+    const params = new URLSearchParams({
+      status: "500",
+      reason: "Internal Server Error"
+    })
+    const errorUrl=`${process.env.BASE_URI}/subdomains/__error/index.html?${params.toString()}`
+    makeRequest(errorUrl, res)
   }
 })
 
