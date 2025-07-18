@@ -11,17 +11,17 @@ import { getSubDomain } from "./util/queryDb.js";
 import jwt from "jsonwebtoken";
 const app = express();
 
-function makeRequest(url, res, content = "application/octet-stream") {
+function makeRequest(url, res, content = "application/octet-stream", params = null) {
   const parsedUrl = new URL(url);
   
-  // Debug: Log the parsed URL components
   console.log("Making request to:", url);
   console.log("Parsed URL - pathname:", parsedUrl.pathname);
   console.log("Parsed URL - search:", parsedUrl.search);
   
   const requestOptions = {
     hostname: parsedUrl.hostname,
-    path: parsedUrl.pathname + parsedUrl.search, // This should include query params
+    port: parsedUrl.port || (parsedUrl.protocol === "https:" ? 443 : 80),
+    path: parsedUrl.pathname + parsedUrl.search,
     method: "GET",
     headers: {
       "User-Agent": "Node.js Proxy",
@@ -31,15 +31,33 @@ function makeRequest(url, res, content = "application/octet-stream") {
   const request = parsedUrl.protocol === "https:" ? httpsRequest : httpRequest;
 
   const proxyReq = request(requestOptions, (proxyRes) => {
-    const contentType = mime.lookup(url) || content;
+    const contentType = mime.lookup(parsedUrl.pathname) || content;
     res.setHeader("Content-Type", contentType);
-
     res.removeHeader("content-security-policy");
-
     res.setHeader("Cache-Control", "public, max-age=3600");
     res.setHeader("X-Content-Type-Options", "nosniff");
 
-    proxyRes.pipe(res);
+    // If it's HTML and we have parameters to inject, collect the response and modify it
+    if (content === "text/html" && params) {
+      let htmlContent = '';
+      
+      proxyRes.on('data', (chunk) => {
+        htmlContent += chunk.toString();
+      });
+      
+      proxyRes.on('end', () => {
+        // Inject the parameters into the HTML
+        const injectedHtml = htmlContent.replace(
+          'window.location.search',
+          `"?${params.toString()}"`
+        );
+        
+        res.send(injectedHtml);
+      });
+    } else {
+      // For non-HTML files, just pipe the response
+      proxyRes.pipe(res);
+    }
   });
   
   proxyReq.on("error", (err) => {
