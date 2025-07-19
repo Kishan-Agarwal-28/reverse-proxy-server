@@ -27,7 +27,8 @@ try {
         return subUpdated
     }
 } catch (error) {
-    throw new Error(error)
+    console.error("Error in getSubDomain:", error);
+    return null;
 }
 }
 
